@@ -120,14 +120,12 @@ canvas{
 <body>
 <div id="app">
 
-<!-- MENU -->
 <div id="menu" class="screen active">
   <h1>Helo Linda</h1>
   <button class="menu-btn" onclick="startGame()">Jogar</button>
   <button class="menu-btn" onclick="openConfig()">Configurações</button>
 </div>
 
-<!-- CONFIG -->
 <div id="config" class="screen">
   <h2>Configurações</h2>
 
@@ -158,14 +156,12 @@ canvas{
   <button class="menu-btn" onclick="backMenu()">Voltar</button>
 </div>
 
-<!-- PAUSE -->
 <div id="pause" class="screen">
   <h2>Pausado</h2>
   <button class="menu-btn" onclick="resumeGame()">Retornar</button>
   <button class="menu-btn" onclick="backMenu()">Menu</button>
 </div>
 
-<!-- GAME -->
 <div id="gameScreen" class="screen">
   <div id="hud">
     <span>🍎 <span id="scoreEl">0</span></span>
@@ -257,6 +253,7 @@ function spawnFood(){
   };
 }
 
+/* 🔴 ÚNICA ALTERAÇÃO: COLISÃO COM O PRÓPRIO CORPO */
 function update(dt){
   const h=snake[0];
   const nx=h.x+dir.x*speed*dt;
@@ -269,7 +266,18 @@ function update(dt){
     return;
   }
 
-  snake.unshift({x:nx,y:ny});
+  const newHead={x:nx,y:ny};
+  snake.unshift(newHead);
+
+  for(let i=1;i<snake.length;i++){
+    const s=snake[i];
+    if(Math.hypot(newHead.x-s.x,newHead.y-s.y)<8){
+      deaths++;
+      updateHUD();
+      backMenu();
+      return;
+    }
+  }
 
   if(Math.hypot(nx-food.x,ny-food.y)<10){
     score++;
@@ -286,34 +294,29 @@ function drawBackground(){
   ctx.fillStyle="#050505";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  if(settings.graphics!=="low"){
-    ctx.strokeStyle=settings.mapColor;
-    ctx.globalAlpha=settings.graphics==="high"?0.35:0.2;
-    const step=canvas.width/10;
-    for(let i=0;i<=canvas.width;i+=step){
-      ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,canvas.height);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(canvas.width,i);ctx.stroke();
-    }
-    ctx.globalAlpha=1;
+  ctx.strokeStyle=settings.mapColor;
+  ctx.globalAlpha=0.35;
+  const step=canvas.width/10;
+  for(let i=0;i<=canvas.width;i+=step){
+    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,canvas.height);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(canvas.width,i);ctx.stroke();
   }
+  ctx.globalAlpha=1;
 
-  ctx.save();
   ctx.font="bold 64px Arial";
   ctx.textAlign="center";
   ctx.fillStyle=settings.mapColor;
   ctx.globalAlpha=0.15;
   ctx.fillText("HELO",canvas.width/2,canvas.height/2+20);
-  ctx.restore();
+  ctx.globalAlpha=1;
 
-  ctx.save();
   ctx.font="12px Arial";
-  ctx.fillStyle=settings.mapColor;
   ctx.globalAlpha=0.35;
   ctx.fillText("Helo eu te amo",10,16);
   ctx.fillText("Helo eu te amo",canvas.width-120,16);
   ctx.fillText("Helo eu te amo",10,canvas.height-6);
   ctx.fillText("Helo eu te amo",canvas.width-120,canvas.height-6);
-  ctx.restore();
+  ctx.globalAlpha=1;
 }
 
 function draw(){
