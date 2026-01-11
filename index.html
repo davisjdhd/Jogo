@@ -17,13 +17,8 @@ html,body{
   overflow:hidden;
 }
 
-#app{
-  position:relative;
-  width:100%;
-  height:100%;
-}
+#app{position:relative;width:100%;height:100%;}
 
-/* TELAS */
 .screen{
   position:absolute;
   inset:0;
@@ -33,10 +28,7 @@ html,body{
   justify-content:center;
 }
 
-.screen.active{
-  display:flex;
-  z-index:10;
-}
+.screen.active{display:flex;z-index:10;}
 
 h1{
   color:#ff3355;
@@ -63,11 +55,7 @@ select{
   font-size:16px;
 }
 
-/* JOGO */
-#gameScreen{
-  justify-content:flex-start;
-  padding-top:8px;
-}
+#gameScreen{justify-content:flex-start;padding-top:8px;}
 
 #hud{
   width:90vw;
@@ -94,7 +82,6 @@ canvas{
   touch-action:none;
 }
 
-/* CONTROLES */
 #controls{
   margin-top:8px;
   display:grid;
@@ -118,17 +105,14 @@ canvas{
 <body>
 <div id="app">
 
-<!-- MENU -->
 <div id="menu" class="screen active">
   <h1>Helo Linda</h1>
   <button class="menu-btn" onclick="startGame()">Jogar</button>
   <button class="menu-btn" onclick="openConfig()">Configurações</button>
 </div>
 
-<!-- CONFIG -->
 <div id="config" class="screen">
   <h2>Configurações</h2>
-
   <label>Gráfico</label>
   <select onchange="settings.graphics=this.value">
     <option value="low">Baixo</option>
@@ -156,14 +140,12 @@ canvas{
   <button class="menu-btn" onclick="backMenu()">Voltar</button>
 </div>
 
-<!-- PAUSE -->
 <div id="pause" class="screen">
   <h2>Pausado</h2>
   <button class="menu-btn" onclick="resumeGame()">Retornar</button>
   <button class="menu-btn" onclick="backMenu()">Menu</button>
 </div>
 
-<!-- GAME -->
 <div id="gameScreen" class="screen">
   <div id="hud">
     <span>🍎 <span id="scoreEl">0</span></span>
@@ -220,10 +202,9 @@ function show(id){
 }
 
 function startGame(){
-  running=false;
-  paused=false;
   resetGame();
   running=true;
+  paused=false;
   last=0;
   show("gameScreen");
   requestAnimationFrame(loop);
@@ -239,13 +220,13 @@ function resetGame(){
   updateHUD();
 }
 
-function pauseGame(){ paused=true; show("pause"); }
-function resumeGame(){ paused=false; last=0; show("gameScreen"); requestAnimationFrame(loop); }
-function backMenu(){ running=false; paused=false; show("menu"); }
-function openConfig(){ show("config"); }
+function pauseGame(){paused=true;show("pause");}
+function resumeGame(){paused=false;show("gameScreen");last=0;requestAnimationFrame(loop);}
+function backMenu(){running=false;paused=false;show("menu");}
+function openConfig(){show("config");}
 
 function setDir(x,y){
-  if(dir.x+x===0 && dir.y+y===0) return;
+  if(dir.x+x===0&&dir.y+y===0) return;
   dir={x,y};
 }
 
@@ -256,39 +237,38 @@ function spawnFood(){
       x:Math.random()*(canvas.width-20)+10,
       y:Math.random()*(canvas.height-20)+10
     };
-    valid=!snake.some(s=>Math.hypot(food.x-s.x,food.y-s.y)<14);
+    valid=true;
+    for(const s of snake){
+      if(Math.hypot(food.x-s.x,food.y-s.y)<14){
+        valid=false;break;
+      }
+    }
   }
 }
 
 function update(dt){
-  const head=snake[0];
-  const nx=head.x+dir.x*speed*dt;
-  const ny=head.y+dir.y*speed*dt;
+  const h=snake[0];
+  const nx=h.x+dir.x*speed*dt;
+  const ny=h.y+dir.y*speed*dt;
 
   if(nx<6||ny<6||nx>canvas.width-6||ny>canvas.height-6){
-    deaths++; updateHUD(); backMenu(); return;
+    deaths++;updateHUD();backMenu();return;
   }
+
+  const willEat=Math.hypot(nx-food.x,ny-food.y)<10;
 
   snake.unshift({x:nx,y:ny});
 
-  let ate=false;
-  if(Math.hypot(nx-food.x,ny-food.y)<10){
-    score++;
-    grow+=4;
-    spawnFood();
-    updateHUD();
-    ate=true;
+  if(willEat){
+    score++;grow+=4;spawnFood();updateHUD();
   }
 
-  if(!ate){
-    if(grow>0) grow--;
-    else snake.pop();
-  }
+  if(grow>0) grow--;
+  else snake.pop();
 
   for(let i=1;i<snake.length;i++){
-    const s=snake[i];
-    if(Math.hypot(nx-s.x,ny-s.y)<8){
-      deaths++; updateHUD(); backMenu(); return;
+    if(Math.hypot(nx-snake[i].x,ny-snake[i].y)<8){
+      deaths++;updateHUD();backMenu();return;
     }
   }
 }
@@ -297,34 +277,21 @@ function drawBackground(){
   ctx.fillStyle="#050505";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  if(settings.graphics!=="low"){
-    ctx.strokeStyle=settings.mapColor;
-    ctx.globalAlpha=settings.graphics==="high"?0.35:0.2;
-    const step=canvas.width/10;
-    for(let i=0;i<=canvas.width;i+=step){
-      ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,canvas.height);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(canvas.width,i);ctx.stroke();
-    }
-    ctx.globalAlpha=1;
+  ctx.strokeStyle=settings.mapColor;
+  ctx.globalAlpha=0.25;
+  const step=canvas.width/10;
+  for(let i=0;i<=canvas.width;i+=step){
+    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,canvas.height);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(canvas.width,i);ctx.stroke();
   }
+  ctx.globalAlpha=1;
 
-  ctx.save();
   ctx.font="bold 64px Arial";
   ctx.textAlign="center";
-  ctx.fillStyle=settings.mapColor;
   ctx.globalAlpha=0.15;
-  ctx.fillText("HELO",canvas.width/2,canvas.height/2+20);
-  ctx.restore();
-
-  ctx.save();
-  ctx.font="12px Arial";
   ctx.fillStyle=settings.mapColor;
-  ctx.globalAlpha=0.35;
-  ctx.fillText("Helo eu te amo",10,16);
-  ctx.fillText("Helo eu te amo",canvas.width-120,16);
-  ctx.fillText("Helo eu te amo",10,canvas.height-6);
-  ctx.fillText("Helo eu te amo",canvas.width-120,canvas.height-6);
-  ctx.restore();
+  ctx.fillText("HELO",canvas.width/2,canvas.height/2+20);
+  ctx.globalAlpha=1;
 }
 
 function draw(){
@@ -358,6 +325,5 @@ function loop(t){
   requestAnimationFrame(loop);
 }
 </script>
-
 </body>
   </html>
