@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Snake • Helo Linda</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
 <style>
 html,body{
@@ -12,33 +12,32 @@ html,body{
   width:100%;
   height:100%;
   background:#000;
-  overflow:hidden;
-  font-family:Arial, sans-serif;
+  font-family:Arial,sans-serif;
   color:#fff;
+  overflow:hidden;
 }
 
 #app{
+  position:relative;
   width:100%;
   height:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-start;
-  padding-top:8px;
-  box-sizing:border-box;
 }
 
-/* 🔥 CORREÇÃO DO BUG DE CLIQUE */
+/* TELAS */
 .screen{
+  position:absolute;
+  inset:0;
   display:none;
   flex-direction:column;
   align-items:center;
+  justify-content:center;
   pointer-events:none;
 }
 
 .screen.active{
   display:flex;
   pointer-events:auto;
+  z-index:10;
 }
 
 h1{
@@ -56,7 +55,6 @@ h1{
   font-size:20px;
   background:linear-gradient(180deg,#ff3355,#aa0022);
   color:#fff;
-  box-shadow:0 0 30px #ff335599;
 }
 
 select{
@@ -67,21 +65,18 @@ select{
   font-size:16px;
 }
 
-canvas{
-  width:90vw;
-  max-width:360px;
-  aspect-ratio:1/1;
-  border-radius:20px;
-  box-shadow:0 0 35px #ff335555;
+/* JOGO */
+#gameScreen{
+  justify-content:flex-start;
+  padding-top:8px;
 }
 
 #hud{
-  width:100%;
+  width:90vw;
   max-width:360px;
   display:flex;
   justify-content:space-between;
-  align-items:center;
-  margin:4px 0;
+  margin-bottom:6px;
 }
 
 #hud button{
@@ -92,8 +87,18 @@ canvas{
   color:#fff;
 }
 
+canvas{
+  width:90vw;
+  max-width:360px;
+  aspect-ratio:1/1;
+  border-radius:24px;
+  box-shadow:0 0 40px #ff335555;
+  touch-action:none;
+}
+
+/* CONTROLES */
 #controls{
-  margin-top:6px;
+  margin-top:8px;
   display:grid;
   grid-template-columns:60px 60px 60px;
   gap:8px;
@@ -103,8 +108,8 @@ canvas{
   height:56px;
   background:#220000;
   border:2px solid #ff3355;
-  border-radius:16px;
-  font-size:20px;
+  border-radius:18px;
+  font-size:22px;
   color:#fff;
 }
 
@@ -115,12 +120,14 @@ canvas{
 <body>
 <div id="app">
 
+<!-- MENU -->
 <div id="menu" class="screen active">
   <h1>Helo Linda</h1>
   <button class="menu-btn" onclick="startGame()">Jogar</button>
   <button class="menu-btn" onclick="openConfig()">Configurações</button>
 </div>
 
+<!-- CONFIG -->
 <div id="config" class="screen">
   <h2>Configurações</h2>
 
@@ -145,19 +152,20 @@ canvas{
     <option value="#ff7777">Vermelha</option>
     <option value="#2ec4b6">Verde</option>
     <option value="#4cc9f0">Azul</option>
-    <option value="#5a00b8">Roxa</option>
     <option value="#ffffff">Branca</option>
   </select>
 
   <button class="menu-btn" onclick="backMenu()">Voltar</button>
 </div>
 
+<!-- PAUSE -->
 <div id="pause" class="screen">
   <h2>Pausado</h2>
   <button class="menu-btn" onclick="resumeGame()">Retornar</button>
   <button class="menu-btn" onclick="backMenu()">Menu</button>
 </div>
 
+<!-- GAME -->
 <div id="gameScreen" class="screen">
   <div id="hud">
     <span>🍎 <span id="scoreEl">0</span></span>
@@ -165,7 +173,7 @@ canvas{
     <span>☠ <span id="deathEl">0</span></span>
   </div>
 
-  <canvas id="game" width="420" height="420"></canvas>
+  <canvas id="game"></canvas>
 
   <div id="controls">
     <div class="hidden"></div>
@@ -186,13 +194,21 @@ canvas{
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 
+function resize(){
+  const size=Math.min(window.innerWidth*0.9,360);
+  canvas.width=size;
+  canvas.height=size;
+}
+window.addEventListener("resize",resize);
+resize();
+
 const scoreEl=document.getElementById("scoreEl");
 const deathEl=document.getElementById("deathEl");
 
 let snake,dir,food;
 let score=0,deaths=0;
 let speed=120,grow=0;
-let running=false,paused=false,lastTime=0;
+let running=false,paused=false,last=0;
 
 const settings={
   graphics:"high",
@@ -201,9 +217,7 @@ const settings={
 };
 
 function show(id){
-  document.querySelectorAll(".screen").forEach(s=>{
-    s.classList.remove("active");
-  });
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
@@ -211,13 +225,13 @@ function startGame(){
   resetGame();
   running=true;
   paused=false;
-  lastTime=0;
+  last=0;
   show("gameScreen");
   requestAnimationFrame(loop);
 }
 
 function resetGame(){
-  snake=[{x:210,y:210}];
+  snake=[{x:canvas.width/2,y:canvas.height/2}];
   dir={x:1,y:0};
   score=0;
   grow=0;
@@ -226,19 +240,21 @@ function resetGame(){
   updateHUD();
 }
 
-function pauseGame(){ paused=true; show("pause"); }
-function resumeGame(){ paused=false; show("gameScreen"); requestAnimationFrame(loop); }
-function backMenu(){ running=false; paused=false; show("menu"); }
-function openConfig(){ show("config"); }
+function pauseGame(){paused=true;show("pause");}
+function resumeGame(){paused=false;show("gameScreen");requestAnimationFrame(loop);}
+function backMenu(){running=false;paused=false;show("menu");}
+function openConfig(){show("config");}
 
 function setDir(x,y){
-  if(paused) return;
   if(dir.x+x===0&&dir.y+y===0) return;
   dir={x,y};
 }
 
 function spawnFood(){
-  food={x:Math.random()*380+20,y:Math.random()*380+20};
+  food={
+    x:Math.random()*(canvas.width-20)+10,
+    y:Math.random()*(canvas.height-20)+10
+  };
 }
 
 function update(dt){
@@ -246,20 +262,20 @@ function update(dt){
   const nx=h.x+dir.x*speed*dt;
   const ny=h.y+dir.y*speed*dt;
 
-  if(nx<0||ny<0||nx>420||ny>420){
-    deaths++; updateHUD(); backMenu(); return;
+  if(nx<6||ny<6||nx>canvas.width-6||ny>canvas.height-6){
+    deaths++;
+    updateHUD();
+    backMenu();
+    return;
   }
 
   snake.unshift({x:nx,y:ny});
 
-  for(let i=1;i<snake.length;i++){
-    if(Math.hypot(nx-snake[i].x,ny-snake[i].y)<6){
-      deaths++; updateHUD(); backMenu(); return;
-    }
-  }
-
   if(Math.hypot(nx-food.x,ny-food.y)<10){
-    score++; grow+=6; spawnFood(); updateHUD();
+    score++;
+    grow+=4;
+    spawnFood();
+    updateHUD();
   }
 
   if(grow>0) grow--;
@@ -268,7 +284,7 @@ function update(dt){
 
 function draw(){
   ctx.fillStyle="#050505";
-  ctx.fillRect(0,0,420,420);
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
   ctx.fillStyle=settings.mapColor;
   ctx.beginPath();
@@ -290,9 +306,9 @@ function updateHUD(){
 
 function loop(t){
   if(!running||paused) return;
-  if(!lastTime) lastTime=t;
-  const dt=(t-lastTime)/1000;
-  lastTime=t;
+  if(!last) last=t;
+  const dt=(t-last)/1000;
+  last=t;
   update(dt);
   draw();
   requestAnimationFrame(loop);
