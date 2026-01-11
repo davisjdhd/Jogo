@@ -28,8 +28,18 @@ html,body{
   box-sizing:border-box;
 }
 
-.screen{display:none;flex-direction:column;align-items:center;}
-.screen.active{display:flex;}
+/* 🔥 CORREÇÃO DO BUG DE CLIQUE */
+.screen{
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  pointer-events:none;
+}
+
+.screen.active{
+  display:flex;
+  pointer-events:auto;
+}
 
 h1{
   color:#ff3355;
@@ -145,7 +155,6 @@ canvas{
 <div id="pause" class="screen">
   <h2>Pausado</h2>
   <button class="menu-btn" onclick="resumeGame()">Retornar</button>
-  <button class="menu-btn" onclick="resetFromPause()">Resetar</button>
   <button class="menu-btn" onclick="backMenu()">Menu</button>
 </div>
 
@@ -174,32 +183,28 @@ canvas{
 </div>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
-const scoreEl = document.getElementById("scoreEl");
-const deathEl = document.getElementById("deathEl");
+const scoreEl=document.getElementById("scoreEl");
+const deathEl=document.getElementById("deathEl");
 
-let snake, dir, food;
-let score = 0, deaths = 0;
-let speed = 120, grow = 0;
-let running = false, paused = false;
-let lastTime = 0;
+let snake,dir,food;
+let score=0,deaths=0;
+let speed=120,grow=0;
+let running=false,paused=false,lastTime=0;
 
-const settings = {
-  graphics: "high",
-  mapColor: "#ff3355",
-  snakeColor: "#ff7777"
+const settings={
+  graphics:"high",
+  mapColor:"#ff3355",
+  snakeColor:"#ff7777"
 };
 
 function show(id){
   document.querySelectorAll(".screen").forEach(s=>{
     s.classList.remove("active");
-    s.style.display="none";
   });
-  const el=document.getElementById(id);
-  el.classList.add("active");
-  el.style.display="flex";
+  document.getElementById(id).classList.add("active");
 }
 
 function startGame(){
@@ -225,19 +230,15 @@ function pauseGame(){ paused=true; show("pause"); }
 function resumeGame(){ paused=false; show("gameScreen"); requestAnimationFrame(loop); }
 function backMenu(){ running=false; paused=false; show("menu"); }
 function openConfig(){ show("config"); }
-function resetFromPause(){ paused=false; resetGame(); show("gameScreen"); requestAnimationFrame(loop); }
 
 function setDir(x,y){
   if(paused) return;
-  if(dir.x+x===0 && dir.y+y===0) return;
+  if(dir.x+x===0&&dir.y+y===0) return;
   dir={x,y};
 }
 
 function spawnFood(){
-  food={
-    x:Math.floor(Math.random()*40)*10+10,
-    y:Math.floor(Math.random()*40)*10+10
-  };
+  food={x:Math.random()*380+20,y:Math.random()*380+20};
 }
 
 function update(dt){
@@ -252,46 +253,22 @@ function update(dt){
   snake.unshift({x:nx,y:ny});
 
   for(let i=1;i<snake.length;i++){
-    const s=snake[i];
-    if(Math.hypot(nx-s.x,ny-s.y)<6){
+    if(Math.hypot(nx-snake[i].x,ny-snake[i].y)<6){
       deaths++; updateHUD(); backMenu(); return;
     }
   }
 
   if(Math.hypot(nx-food.x,ny-food.y)<10){
-    score++; grow+=8;
-    if(score%20===0) speed+=8;
-    spawnFood(); updateHUD();
+    score++; grow+=6; spawnFood(); updateHUD();
   }
 
   if(grow>0) grow--;
   else snake.pop();
 }
 
-function drawBackground(){
+function draw(){
   ctx.fillStyle="#050505";
   ctx.fillRect(0,0,420,420);
-
-  if(settings.graphics!=="low"){
-    ctx.strokeStyle=settings.mapColor;
-    ctx.globalAlpha=settings.graphics==="high"?0.35:0.2;
-    for(let i=0;i<420;i+=40){
-      ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,420);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(420,i);ctx.stroke();
-    }
-    ctx.globalAlpha=1;
-  }
-
-  ctx.font="bold 64px Arial";
-  ctx.globalAlpha=0.15;
-  ctx.fillStyle=settings.mapColor;
-  ctx.textAlign="center";
-  ctx.fillText("HELO",210,230);
-  ctx.globalAlpha=1;
-}
-
-function draw(){
-  drawBackground();
 
   ctx.fillStyle=settings.mapColor;
   ctx.beginPath();
