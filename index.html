@@ -118,12 +118,14 @@ canvas{
 <body>
 <div id="app">
 
+<!-- MENU -->
 <div id="menu" class="screen active">
   <h1>Helo Linda</h1>
   <button class="menu-btn" onclick="startGame()">Jogar</button>
   <button class="menu-btn" onclick="openConfig()">Configurações</button>
 </div>
 
+<!-- CONFIG -->
 <div id="config" class="screen">
   <h2>Configurações</h2>
 
@@ -154,12 +156,14 @@ canvas{
   <button class="menu-btn" onclick="backMenu()">Voltar</button>
 </div>
 
+<!-- PAUSE -->
 <div id="pause" class="screen">
   <h2>Pausado</h2>
   <button class="menu-btn" onclick="resumeGame()">Retornar</button>
   <button class="menu-btn" onclick="backMenu()">Menu</button>
 </div>
 
+<!-- GAME -->
 <div id="gameScreen" class="screen">
   <div id="hud">
     <span>🍎 <span id="scoreEl">0</span></span>
@@ -216,9 +220,10 @@ function show(id){
 }
 
 function startGame(){
+  running=false;
+  paused=false;
   resetGame();
   running=true;
-  paused=false;
   last=0;
   show("gameScreen");
   requestAnimationFrame(loop);
@@ -235,7 +240,7 @@ function resetGame(){
 }
 
 function pauseGame(){ paused=true; show("pause"); }
-function resumeGame(){ paused=false; show("gameScreen"); last=0; requestAnimationFrame(loop); }
+function resumeGame(){ paused=false; last=0; show("gameScreen"); requestAnimationFrame(loop); }
 function backMenu(){ running=false; paused=false; show("menu"); }
 function openConfig(){ show("config"); }
 
@@ -244,40 +249,29 @@ function setDir(x,y){
   dir={x,y};
 }
 
-/* NUNCA NASCE DENTRO DA COBRA */
 function spawnFood(){
-  let safe=false;
-  while(!safe){
+  let valid=false;
+  while(!valid){
     food={
       x:Math.random()*(canvas.width-20)+10,
       y:Math.random()*(canvas.height-20)+10
     };
-    safe=true;
-    for(let s of snake){
-      if(Math.hypot(food.x-s.x,food.y-s.y)<14){
-        safe=false;
-        break;
-      }
-    }
+    valid=!snake.some(s=>Math.hypot(food.x-s.x,food.y-s.y)<14);
   }
 }
 
 function update(dt){
-  const h=snake[0];
-  const nx=h.x+dir.x*speed*dt;
-  const ny=h.y+dir.y*speed*dt;
+  const head=snake[0];
+  const nx=head.x+dir.x*speed*dt;
+  const ny=head.y+dir.y*speed*dt;
 
-  /* PAREDE */
   if(nx<6||ny<6||nx>canvas.width-6||ny>canvas.height-6){
-    deaths++;
-    updateHUD();
-    backMenu();
-    return;
+    deaths++; updateHUD(); backMenu(); return;
   }
 
-  let ate=false;
+  snake.unshift({x:nx,y:ny});
 
-  /* COMEU */
+  let ate=false;
   if(Math.hypot(nx-food.x,ny-food.y)<10){
     score++;
     grow+=4;
@@ -286,22 +280,17 @@ function update(dt){
     ate=true;
   }
 
-  snake.unshift({x:nx,y:ny});
-
-  /* COLISÃO COM O PRÓPRIO CORPO (SÓ SE NÃO COMEU) */
   if(!ate){
-    for(let i=1;i<snake.length;i++){
-      if(Math.hypot(nx-snake[i].x,ny-snake[i].y)<8){
-        deaths++;
-        updateHUD();
-        backMenu();
-        return;
-      }
-    }
+    if(grow>0) grow--;
+    else snake.pop();
   }
 
-  if(grow>0) grow--;
-  else snake.pop();
+  for(let i=1;i<snake.length;i++){
+    const s=snake[i];
+    if(Math.hypot(nx-s.x,ny-s.y)<8){
+      deaths++; updateHUD(); backMenu(); return;
+    }
+  }
 }
 
 function drawBackground(){
@@ -371,4 +360,4 @@ function loop(t){
 </script>
 
 </body>
-</html>
+  </html>
