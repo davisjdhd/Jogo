@@ -5,12 +5,12 @@
 <title>Snake • Helo Linda</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- 🔹 PWA -->
+<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#6a00ff">
 
 <style>
-  html, body{
+html, body{
   margin:0;
   padding:0;
   width:100%;
@@ -19,21 +19,33 @@
   background:#000;
   font-family:Arial, sans-serif;
   color:#fff;
-  }
+}
 
-  #app{
+#app{
+  position:relative;
   width:100%;
   height:100%;
   display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+
+/* TELAS */
+.screen{
+  position:absolute;
+  inset:0;
+  display:none;
   flex-direction:column;
   align-items:center;
-  justify-content:flex-start;
-  padding-top:8px;
-  box-sizing:border-box;
-  }
+  justify-content:center;
+  pointer-events:none;
+}
 
-.screen{ display:none; flex-direction:column; align-items:center; }
-.screen.active{ display:flex; }
+.screen.active{
+  display:flex;
+  pointer-events:auto;
+}
 
 h1{
   color:#ff3355;
@@ -61,11 +73,11 @@ select{
   font-size:16px;
 }
 
+/* GAME */
 canvas{
   width:90vw;
   max-width:360px;
-  aspect-ratio:1 / 1;
-
+  aspect-ratio:1/1;
   border-radius:20px;
   box-shadow:0 0 35px #ff335555;
 }
@@ -77,7 +89,6 @@ canvas{
   justify-content:space-between;
   align-items:center;
   margin:4px 0;
-  font-size:14px;
 }
 
 #hud button{
@@ -94,6 +105,7 @@ canvas{
   grid-template-columns:60px 60px 60px;
   gap:8px;
 }
+
 #controls button{
   height:56px;
   background:#220000;
@@ -102,6 +114,7 @@ canvas{
   font-size:20px;
   color:#fff;
 }
+
 .hidden{visibility:hidden;}
 </style>
 </head>
@@ -109,12 +122,14 @@ canvas{
 <body>
 <div id="app">
 
+<!-- MENU -->
 <div id="menu" class="screen active">
   <h1>Helo Linda</h1>
   <button class="menu-btn" onclick="startGame()">Jogar</button>
   <button class="menu-btn" onclick="openConfig()">Configurações</button>
 </div>
 
+<!-- CONFIG -->
 <div id="config" class="screen">
   <h2>Configurações</h2>
 
@@ -146,6 +161,7 @@ canvas{
   <button class="menu-btn" onclick="backMenu()">Voltar</button>
 </div>
 
+<!-- PAUSE -->
 <div id="pause" class="screen">
   <h2>Pausado</h2>
   <button class="menu-btn" onclick="resumeGame()">Retornar</button>
@@ -153,6 +169,7 @@ canvas{
   <button class="menu-btn" onclick="backMenu()">Menu</button>
 </div>
 
+<!-- GAME -->
 <div id="gameScreen" class="screen">
   <div id="hud">
     <span>🍎 <span id="scoreEl">0</span></span>
@@ -160,7 +177,7 @@ canvas{
     <span>☠ <span id="deathEl">0</span></span>
   </div>
 
-  <canvas id="game" width="420" height="420"></canvas>
+  <canvas id="game"></canvas>
 
   <div id="controls">
     <div class="hidden"></div>
@@ -178,8 +195,16 @@ canvas{
 </div>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas(){
+  const size = Math.min(window.innerWidth, window.innerHeight) - 140;
+  canvas.width = size;
+  canvas.height = size;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
 
 const scoreEl=document.getElementById("scoreEl");
 const deathEl=document.getElementById("deathEl");
@@ -199,12 +224,11 @@ const settings={
 function show(id){
   document.querySelectorAll(".screen").forEach(s=>{
     s.classList.remove("active");
-    s.style.display = "none";
+    s.style.display="none";
   });
-
-  const el = document.getElementById(id);
+  const el=document.getElementById(id);
   el.classList.add("active");
-  el.style.display = "flex";
+  el.style.display="flex";
 }
 
 function startGame(){
@@ -217,20 +241,13 @@ function startGame(){
 }
 
 function resetGame(){
-  snake=[{x:210,y:210}];
+  snake=[{x:canvas.width/2,y:canvas.height/2}];
   dir={x:1,y:0};
   scoreValue=0;
   grow=0;
   speed=120;
   spawnFood();
   updateHUD();
-}
-
-function resetFromPause(){
-  paused=false;
-  resetGame();
-  show("gameScreen");
-  requestAnimationFrame(loop);
 }
 
 function pauseGame(){ paused=true; show("pause"); }
@@ -240,14 +257,15 @@ function openConfig(){ show("config"); }
 
 function setDir(x,y){
   if(paused) return;
-  if(dir.x+x===0&&dir.y+y===0) return;
+  if(dir.x+x===0 && dir.y+y===0) return;
   dir={x,y};
 }
 
 function spawnFood(){
+  const grid=20;
   food={
-    x:Math.floor(Math.random()*40)*10+10,
-    y:Math.floor(Math.random()*40)*10+10
+    x:Math.floor(Math.random()*(canvas.width/grid))*grid+grid/2,
+    y:Math.floor(Math.random()*(canvas.height/grid))*grid+grid/2
   };
 }
 
@@ -256,72 +274,41 @@ function update(dt){
   const nx=h.x+dir.x*speed*dt;
   const ny=h.y+dir.y*speed*dt;
 
-  if(nx<0||ny<0||nx>420||ny>420){
-    deathValue++;
-    updateHUD();
-    backMenu();
-    return;
+  if(nx<0||ny<0||nx>canvas.width||ny>canvas.height){
+    deathValue++; updateHUD(); backMenu(); return;
   }
 
   snake.unshift({x:nx,y:ny});
-// COLISÃO COM O PRÓPRIO CORPO
-for(let i = 1; i < snake.length; i++){
-  const s = snake[i];
-  if(Math.hypot(nx - s.x, ny - s.y) < 8){
-    deathValue++;
-    updateHUD();
-    backMenu();
-    return;
-  }
-}
 
-if(Math.hypot(nx-food.x,ny-food.y)<10){
-  scoreValue++;
-  grow+=5;
-  if(scoreValue%20===0) speed+=8;
-  spawnFood();
-  updateHUD();
-}
+  for(let i=1;i<snake.length;i++){
+    if(Math.hypot(nx-snake[i].x,ny-snake[i].y)<8){
+      deathValue++; updateHUD(); backMenu(); return;
+    }
+  }
+
+  if(Math.hypot(nx-food.x,ny-food.y)<10){
+    scoreValue++; grow+=6;
+    if(scoreValue%20===0) speed+=8;
+    spawnFood(); updateHUD();
+  }
 
   if(grow>0) grow--;
   else snake.pop();
 }
 
-function drawBackground(){
-  ctx.fillStyle="#050505";
-  ctx.fillRect(0,0,420,420);
-
-  if(settings.graphics!=="low"){
-    ctx.strokeStyle=settings.mapColor;
-    ctx.globalAlpha=settings.graphics==="high"?0.35:0.2;
-    for(let i=0;i<420;i+=40){
-      ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,420);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(420,i);ctx.stroke();
-    }
-    ctx.globalAlpha=1;
-  }
-
-  ctx.save();
-  ctx.font="bold 64px Arial";
-  ctx.textAlign="center";
-  ctx.globalAlpha=0.15;
-  ctx.fillStyle=settings.mapColor;
-  ctx.fillText("HELO",210,230);
-  ctx.restore();
-
-  ctx.save();
-  ctx.font="12px Arial";
-  ctx.fillStyle=settings.mapColor;
-  ctx.globalAlpha=0.35;
-  ctx.fillText("Helo eu te amo",10,15);
-  ctx.fillText("Helo eu te amo",280,15);
-  ctx.fillText("Helo eu te amo",10,410);
-  ctx.fillText("Helo eu te amo",280,410);
-  ctx.restore();
-}
-
 function draw(){
-  drawBackground();
+  ctx.fillStyle="#050505";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.strokeStyle=settings.mapColor;
+  ctx.globalAlpha=settings.graphics==="high"?0.35:0.2;
+  if(settings.graphics!=="low"){
+    for(let i=0;i<canvas.width;i+=40){
+      ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,canvas.height);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(canvas.width,i);ctx.stroke();
+    }
+  }
+  ctx.globalAlpha=1;
 
   ctx.fillStyle=settings.mapColor;
   ctx.beginPath();
@@ -352,12 +339,11 @@ function loop(t){
 }
 </script>
 
-<!-- 🔹 SERVICE WORKER -->
 <script>
-if ("serviceWorker" in navigator) {
+if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js");
 }
 </script>
 
 </body>
-  </html>
+</html>
