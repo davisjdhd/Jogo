@@ -258,14 +258,24 @@ function update(dt){
   }
 
   snake.unshift({x:nx,y:ny});
-
-  if(Math.hypot(nx-food.x,ny-food.y)<10){
-    scoreValue++;
-    grow+=5;
-    if(scoreValue%20===0) speed+=8;
-    spawnFood();
+// COLISÃO COM O PRÓPRIO CORPO
+for(let i = 1; i < snake.length; i++){
+  const s = snake[i];
+  if(Math.hypot(nx - s.x, ny - s.y) < 8){
+    deathValue++;
     updateHUD();
+    backMenu();
+    return;
   }
+}
+
+if(Math.hypot(nx-food.x,ny-food.y)<10){
+  scoreValue++;
+  grow+=5;
+  if(scoreValue%20===0) speed+=8;
+  spawnFood();
+  updateHUD();
+}
 
   if(grow>0) grow--;
   else snake.pop();
