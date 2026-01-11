@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Snake • Helo Linda</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- 🔹 PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6a00ff">
+
+<style>
+html,body{
+  margin:0;
+  height:100%;
+  background:#000;
+  font-family:Arial, sans-serif;
+  color:#fff;
+}
+
+#app{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+}
+
+.screen{ display:none; flex-direction:column; align-items:center; }
+.screen.active{ display:flex; }
+
+h1{
+  color:#ff3355;
+  font-size:42px;
+  text-shadow:0 0 25px #ff3355;
+}
+
+.menu-btn{
+  width:260px;
+  padding:16px;
+  margin:10px;
+  border-radius:18px;
+  border:none;
+  font-size:20px;
+  background:linear-gradient(180deg,#ff3355,#aa0022);
+  color:#fff;
+  box-shadow:0 0 30px #ff335599;
+}
+
+select{
+  width:260px;
+  padding:10px;
+  margin:6px;
+  border-radius:14px;
+  font-size:16px;
+}
+
+canvas{
+  border-radius:24px;
+  box-shadow:0 0 50px #ff335555;
+}
+
+#hud{
+  width:420px;
+  display:flex;
+  justify-content:space-between;
+  margin:8px 0;
+}
+
+#hud button{
+  border:none;
+  border-radius:10px;
+  padding:6px 14px;
+  background:#ff3355;
+  color:#fff;
+}
+
+#controls{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns:70px 70px 70px;
+  gap:10px;
+}
+#controls button{
+  background:#220000;
+  border:2px solid #ff3355;
+  border-radius:18px;
+  font-size:22px;
+  color:#fff;
+}
+.hidden{visibility:hidden;}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+<div id="menu" class="screen active">
+  <h1>Helo Linda</h1>
+  <button class="menu-btn" onclick="startGame()">Jogar</button>
+  <button class="menu-btn" onclick="openConfig()">Configurações</button>
+</div>
+
+<div id="config" class="screen">
+  <h2>Configurações</h2>
+
+  <label>Gráfico</label>
+  <select onchange="settings.graphics=this.value">
+    <option value="low">Baixo</option>
+    <option value="normal">Normal</option>
+    <option value="high" selected>Alto</option>
+  </select>
+
+  <label>Cor do mapa</label>
+  <select onchange="settings.mapColor=this.value">
+    <option value="#ff3355">Vermelho</option>
+    <option value="#4cc9f0">Azul</option>
+    <option value="#a100ff">Roxo</option>
+    <option value="#2ec4b6">Verde</option>
+    <option value="#ff69b4">Rosa</option>
+  </select>
+
+  <label>Cor da cobrinha</label>
+  <select onchange="settings.snakeColor=this.value">
+    <option value="#ff7777">Vermelha</option>
+    <option value="#2ec4b6">Verde</option>
+    <option value="#4cc9f0">Azul</option>
+    <option value="#5a00b8">Roxa</option>
+    <option value="#ffffff">Branca</option>
+  </select>
+
+  <button class="menu-btn" onclick="backMenu()">Voltar</button>
+</div>
+
+<div id="pause" class="screen">
+  <h2>Pausado</h2>
+  <button class="menu-btn" onclick="resumeGame()">Retornar</button>
+  <button class="menu-btn" onclick="resetFromPause()">Resetar</button>
+  <button class="menu-btn" onclick="backMenu()">Menu</button>
+</div>
+
+<div id="gameScreen" class="screen">
+  <div id="hud">
+    <span>🍎 <span id="scoreEl">0</span></span>
+    <button onclick="pauseGame()">⏸</button>
+    <span>☠ <span id="deathEl">0</span></span>
+  </div>
+
+  <canvas id="game" width="420" height="420"></canvas>
+
+  <div id="controls">
+    <div class="hidden"></div>
+    <button onclick="setDir(0,-1)">⬆</button>
+    <div class="hidden"></div>
+    <button onclick="setDir(-1,0)">⬅</button>
+    <div class="hidden"></div>
+    <button onclick="setDir(1,0)">➡</button>
+    <div class="hidden"></div>
+    <button onclick="setDir(0,1)">⬇</button>
+    <div class="hidden"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+const scoreEl=document.getElementById("scoreEl");
+const deathEl=document.getElementById("deathEl");
+
+let snake,dir,food;
+let scoreValue=0,deathValue=0;
+let speed=120,grow=0;
+let running=false,paused=false;
+let lastTime=0;
+
+const settings={
+  graphics:"high",
+  mapColor:"#ff3355",
+  snakeColor:"#ff7777"
+};
+
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function startGame(){
+  resetGame();
+  running=true;
+  paused=false;
+  lastTime=0;
+  show("gameScreen");
+  requestAnimationFrame(loop);
+}
+
+function resetGame(){
+  snake=[{x:210,y:210}];
+  dir={x:1,y:0};
+  scoreValue=0;
+  grow=0;
+  speed=120;
+  spawnFood();
+  updateHUD();
+}
+
+function resetFromPause(){
+  paused=false;
+  resetGame();
+  show("gameScreen");
+  requestAnimationFrame(loop);
+}
+
+function pauseGame(){ paused=true; show("pause"); }
+function resumeGame(){ paused=false; show("gameScreen"); requestAnimationFrame(loop); }
+function backMenu(){ running=false; paused=false; show("menu"); }
+function openConfig(){ show("config"); }
+
+function setDir(x,y){
+  if(paused) return;
+  if(dir.x+x===0&&dir.y+y===0) return;
+  dir={x,y};
+}
+
+function spawnFood(){
+  food={
+    x:Math.floor(Math.random()*40)*10+10,
+    y:Math.floor(Math.random()*40)*10+10
+  };
+}
+
+function update(dt){
+  const h=snake[0];
+  const nx=h.x+dir.x*speed*dt;
+  const ny=h.y+dir.y*speed*dt;
+
+  if(nx<0||ny<0||nx>420||ny>420){
+    deathValue++;
+    updateHUD();
+    backMenu();
+    return;
+  }
+
+  snake.unshift({x:nx,y:ny});
+
+  if(Math.hypot(nx-food.x,ny-food.y)<10){
+    scoreValue++;
+    grow+=5;
+    if(scoreValue%20===0) speed+=8;
+    spawnFood();
+    updateHUD();
+  }
+
+  if(grow>0) grow--;
+  else snake.pop();
+}
+
+function drawBackground(){
+  ctx.fillStyle="#050505";
+  ctx.fillRect(0,0,420,420);
+
+  if(settings.graphics!=="low"){
+    ctx.strokeStyle=settings.mapColor;
+    ctx.globalAlpha=settings.graphics==="high"?0.35:0.2;
+    for(let i=0;i<420;i+=40){
+      ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,420);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(420,i);ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  ctx.save();
+  ctx.font="bold 64px Arial";
+  ctx.textAlign="center";
+  ctx.globalAlpha=0.15;
+  ctx.fillStyle=settings.mapColor;
+  ctx.fillText("HELO",210,230);
+  ctx.restore();
+
+  ctx.save();
+  ctx.font="12px Arial";
+  ctx.fillStyle=settings.mapColor;
+  ctx.globalAlpha=0.35;
+  ctx.fillText("Helo eu te amo",10,15);
+  ctx.fillText("Helo eu te amo",280,15);
+  ctx.fillText("Helo eu te amo",10,410);
+  ctx.fillText("Helo eu te amo",280,410);
+  ctx.restore();
+}
+
+function draw(){
+  drawBackground();
+
+  ctx.fillStyle=settings.mapColor;
+  ctx.beginPath();
+  ctx.arc(food.x,food.y,6,0,Math.PI*2);
+  ctx.fill();
+
+  snake.forEach(s=>{
+    ctx.fillStyle=settings.snakeColor;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,6,0,Math.PI*2);
+    ctx.fill();
+  });
+}
+
+function updateHUD(){
+  scoreEl.textContent=scoreValue;
+  deathEl.textContent=deathValue;
+}
+
+function loop(t){
+  if(!running||paused) return;
+  if(!lastTime) lastTime=t;
+  const dt=(t-lastTime)/1000;
+  lastTime=t;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+</script>
+
+<!-- 🔹 SERVICE WORKER -->
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+
+</body>
+  </html>
