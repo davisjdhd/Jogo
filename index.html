@@ -15,20 +15,22 @@
   padding:0;
   width:100%;
   height:100%;
-  overflow:hidden; /* ISSO É CRUCIAL */
+  overflow:hidden;
   background:#000;
   font-family:Arial, sans-serif;
   color:#fff;
   }
 
-#app{
+  #app{
   width:100%;
   height:100%;
   display:flex;
   flex-direction:column;
   align-items:center;
-  justify-content:center;
-}
+  justify-content:flex-start;
+  padding-top:8px;
+  box-sizing:border-box;
+  }
 
 .screen{ display:none; flex-direction:column; align-items:center; }
 .screen.active{ display:flex; }
@@ -60,19 +62,22 @@ select{
 }
 
 canvas{
-  width:100%;
+  width:90vw;
   max-width:360px;
   aspect-ratio:1 / 1;
 
-  border-radius:24px;
-  box-shadow:0 0 40px #ff335555;
+  border-radius:20px;
+  box-shadow:0 0 35px #ff335555;
 }
 
 #hud{
-  width:420px;
+  width:100%;
+  max-width:360px;
   display:flex;
   justify-content:space-between;
-  margin:8px 0;
+  align-items:center;
+  margin:4px 0;
+  font-size:14px;
 }
 
 #hud button{
@@ -84,16 +89,17 @@ canvas{
 }
 
 #controls{
-  margin-top:10px;
+  margin-top:6px;
   display:grid;
-  grid-template-columns:70px 70px 70px;
-  gap:10px;
+  grid-template-columns:60px 60px 60px;
+  gap:8px;
 }
 #controls button{
+  height:56px;
   background:#220000;
   border:2px solid #ff3355;
-  border-radius:18px;
-  font-size:22px;
+  border-radius:16px;
+  font-size:20px;
   color:#fff;
 }
 .hidden{visibility:hidden;}
