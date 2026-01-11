@@ -12,33 +12,28 @@ html,body{
   width:100%;
   height:100%;
   background:#000;
-  color:#fff;
-  font-family:Arial,sans-serif;
   overflow:hidden;
+  font-family:Arial, sans-serif;
+  color:#fff;
 }
 
 #app{
   width:100%;
   height:100%;
   display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.screen{
-  position:absolute;
-  inset:0;
-  display:none;
   flex-direction:column;
   align-items:center;
-  justify-content:center;
+  justify-content:flex-start;
+  padding-top:8px;
+  box-sizing:border-box;
 }
 
+.screen{display:none;flex-direction:column;align-items:center;}
 .screen.active{display:flex;}
 
 h1{
-  font-size:42px;
   color:#ff3355;
+  font-size:42px;
   text-shadow:0 0 25px #ff3355;
 }
 
@@ -46,8 +41,8 @@ h1{
   width:260px;
   padding:16px;
   margin:10px;
-  border:none;
   border-radius:18px;
+  border:none;
   font-size:20px;
   background:linear-gradient(180deg,#ff3355,#aa0022);
   color:#fff;
@@ -67,31 +62,31 @@ canvas{
   max-width:360px;
   aspect-ratio:1/1;
   border-radius:20px;
-  box-shadow:0 0 40px #ff335555;
+  box-shadow:0 0 35px #ff335555;
 }
 
 #hud{
-  width:90vw;
+  width:100%;
   max-width:360px;
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:6px;
+  margin:4px 0;
 }
 
 #hud button{
-  padding:6px 14px;
   border:none;
   border-radius:10px;
+  padding:6px 14px;
   background:#ff3355;
   color:#fff;
 }
 
 #controls{
+  margin-top:6px;
   display:grid;
   grid-template-columns:60px 60px 60px;
   gap:8px;
-  margin-top:8px;
 }
 
 #controls button{
@@ -112,50 +107,52 @@ canvas{
 
 <div id="menu" class="screen active">
   <h1>Helo Linda</h1>
-  <button class="menu-btn" id="playBtn">Jogar</button>
-  <button class="menu-btn" id="configBtn">Configurações</button>
+  <button class="menu-btn" onclick="startGame()">Jogar</button>
+  <button class="menu-btn" onclick="openConfig()">Configurações</button>
 </div>
 
 <div id="config" class="screen">
   <h2>Configurações</h2>
 
   <label>Gráfico</label>
-  <select id="graphicsSel">
+  <select onchange="settings.graphics=this.value">
     <option value="low">Baixo</option>
     <option value="normal">Normal</option>
     <option value="high" selected>Alto</option>
   </select>
 
   <label>Cor do mapa</label>
-  <select id="mapSel">
+  <select onchange="settings.mapColor=this.value">
     <option value="#ff3355">Vermelho</option>
     <option value="#4cc9f0">Azul</option>
     <option value="#a100ff">Roxo</option>
     <option value="#2ec4b6">Verde</option>
+    <option value="#ff69b4">Rosa</option>
   </select>
 
   <label>Cor da cobrinha</label>
-  <select id="snakeSel">
-    <option value="#ffffff">Branca</option>
+  <select onchange="settings.snakeColor=this.value">
     <option value="#ff7777">Vermelha</option>
+    <option value="#2ec4b6">Verde</option>
     <option value="#4cc9f0">Azul</option>
-    <option value="#5a00ff">Roxa</option>
+    <option value="#5a00b8">Roxa</option>
+    <option value="#ffffff">Branca</option>
   </select>
 
-  <button class="menu-btn" id="backMenuBtn">Voltar</button>
+  <button class="menu-btn" onclick="backMenu()">Voltar</button>
 </div>
 
 <div id="pause" class="screen">
   <h2>Pausado</h2>
-  <button class="menu-btn" id="resumeBtn">Retornar</button>
-  <button class="menu-btn" id="resetBtn">Resetar</button>
-  <button class="menu-btn" id="menuBtn">Menu</button>
+  <button class="menu-btn" onclick="resumeGame()">Retornar</button>
+  <button class="menu-btn" onclick="resetFromPause()">Resetar</button>
+  <button class="menu-btn" onclick="backMenu()">Menu</button>
 </div>
 
 <div id="gameScreen" class="screen">
   <div id="hud">
     <span>🍎 <span id="scoreEl">0</span></span>
-    <button id="pauseBtn">⏸</button>
+    <button onclick="pauseGame()">⏸</button>
     <span>☠ <span id="deathEl">0</span></span>
   </div>
 
@@ -177,36 +174,63 @@ canvas{
 </div>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let snake,dir,food;
-let score=0,deaths=0,grow=0,speed=120;
-let running=false,paused=false,last=0;
+const scoreEl = document.getElementById("scoreEl");
+const deathEl = document.getElementById("deathEl");
 
-const settings={
-  graphics:"high",
-  map:"#ff3355",
-  snake:"#ffffff"
+let snake, dir, food;
+let score = 0, deaths = 0;
+let speed = 120, grow = 0;
+let running = false, paused = false;
+let lastTime = 0;
+
+const settings = {
+  graphics: "high",
+  mapColor: "#ff3355",
+  snakeColor: "#ff7777"
 };
 
-const scoreEl=document.getElementById("scoreEl");
-const deathEl=document.getElementById("deathEl");
-
 function show(id){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".screen").forEach(s=>{
+    s.classList.remove("active");
+    s.style.display="none";
+  });
+  const el=document.getElementById(id);
+  el.classList.add("active");
+  el.style.display="flex";
 }
 
 function startGame(){
-  snake=[{x:210,y:210}];
-  dir={x:1,y:0};
-  score=0;grow=0;speed=120;
-  spawnFood();
-  running=true;paused=false;last=0;
-  updateHUD();
+  resetGame();
+  running=true;
+  paused=false;
+  lastTime=0;
   show("gameScreen");
   requestAnimationFrame(loop);
+}
+
+function resetGame(){
+  snake=[{x:210,y:210}];
+  dir={x:1,y:0};
+  score=0;
+  grow=0;
+  speed=120;
+  spawnFood();
+  updateHUD();
+}
+
+function pauseGame(){ paused=true; show("pause"); }
+function resumeGame(){ paused=false; show("gameScreen"); requestAnimationFrame(loop); }
+function backMenu(){ running=false; paused=false; show("menu"); }
+function openConfig(){ show("config"); }
+function resetFromPause(){ paused=false; resetGame(); show("gameScreen"); requestAnimationFrame(loop); }
+
+function setDir(x,y){
+  if(paused) return;
+  if(dir.x+x===0 && dir.y+y===0) return;
+  dir={x,y};
 }
 
 function spawnFood(){
@@ -216,78 +240,70 @@ function spawnFood(){
   };
 }
 
-function setDir(x,y){
-  if(dir.x+x===0&&dir.y+y===0) return;
-  dir={x,y};
-}
-
 function update(dt){
   const h=snake[0];
   const nx=h.x+dir.x*speed*dt;
   const ny=h.y+dir.y*speed*dt;
 
   if(nx<0||ny<0||nx>420||ny>420){
-    deaths++;updateHUD();show("menu");running=false;return;
-  }
-
-  for(let i=1;i<snake.length;i++){
-    if(Math.hypot(nx-snake[i].x,ny-snake[i].y)<8){
-      deaths++;updateHUD();show("menu");running=false;return;
-    }
+    deaths++; updateHUD(); backMenu(); return;
   }
 
   snake.unshift({x:nx,y:ny});
 
-  if(Math.hypot(nx-food.x,ny-food.y)<10){
-    score++;grow+=8;
-    if(score%20===0) speed+=10;
-    spawnFood();
-    updateHUD();
+  for(let i=1;i<snake.length;i++){
+    const s=snake[i];
+    if(Math.hypot(nx-s.x,ny-s.y)<6){
+      deaths++; updateHUD(); backMenu(); return;
+    }
   }
 
-  if(grow>0) grow--; else snake.pop();
+  if(Math.hypot(nx-food.x,ny-food.y)<10){
+    score++; grow+=8;
+    if(score%20===0) speed+=8;
+    spawnFood(); updateHUD();
+  }
+
+  if(grow>0) grow--;
+  else snake.pop();
 }
 
-function draw(){
+function drawBackground(){
   ctx.fillStyle="#050505";
   ctx.fillRect(0,0,420,420);
 
-  ctx.strokeStyle=settings.map;
-  ctx.globalAlpha=0.3;
-  for(let i=0;i<=420;i+=40){
-    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,420);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(420,i);ctx.stroke();
+  if(settings.graphics!=="low"){
+    ctx.strokeStyle=settings.mapColor;
+    ctx.globalAlpha=settings.graphics==="high"?0.35:0.2;
+    for(let i=0;i<420;i+=40){
+      ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,420);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(420,i);ctx.stroke();
+    }
+    ctx.globalAlpha=1;
   }
-  ctx.globalAlpha=1;
 
-  ctx.fillStyle=settings.map;
-  ctx.font="bold 60px Arial";
+  ctx.font="bold 64px Arial";
   ctx.globalAlpha=0.15;
+  ctx.fillStyle=settings.mapColor;
   ctx.textAlign="center";
   ctx.fillText("HELO",210,230);
   ctx.globalAlpha=1;
+}
 
-  ctx.fillStyle=settings.map;
+function draw(){
+  drawBackground();
+
+  ctx.fillStyle=settings.mapColor;
   ctx.beginPath();
   ctx.arc(food.x,food.y,6,0,Math.PI*2);
   ctx.fill();
 
-  ctx.fillStyle=settings.snake;
   snake.forEach(s=>{
+    ctx.fillStyle=settings.snakeColor;
     ctx.beginPath();
     ctx.arc(s.x,s.y,6,0,Math.PI*2);
     ctx.fill();
   });
-}
-
-function loop(t){
-  if(!running||paused) return;
-  if(!last) last=t;
-  const dt=(t-last)/1000;
-  last=t;
-  update(dt);
-  draw();
-  requestAnimationFrame(loop);
 }
 
 function updateHUD(){
@@ -295,18 +311,15 @@ function updateHUD(){
   deathEl.textContent=deaths;
 }
 
-/* BOTÕES */
-playBtn.onclick=startGame;
-configBtn.onclick=()=>show("config");
-backMenuBtn.onclick=()=>show("menu");
-pauseBtn.onclick=()=>{paused=true;show("pause");};
-resumeBtn.onclick=()=>{paused=false;show("gameScreen");requestAnimationFrame(loop);};
-resetBtn.onclick=startGame;
-menuBtn.onclick=()=>{running=false;show("menu");};
-
-graphicsSel.onchange=e=>settings.graphics=e.target.value;
-mapSel.onchange=e=>settings.map=e.target.value;
-snakeSel.onchange=e=>settings.snake=e.target.value;
+function loop(t){
+  if(!running||paused) return;
+  if(!lastTime) lastTime=t;
+  const dt=(t-lastTime)/1000;
+  lastTime=t;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
 </script>
 
 </body>
